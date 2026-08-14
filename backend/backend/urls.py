@@ -18,8 +18,14 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path, include
+from converter.media_views import serve_video
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('converter.urls')),
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    path(
+        'media/<path:path>',
+        serve_video,
+        name='serve_video',
+    ),
+] #+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

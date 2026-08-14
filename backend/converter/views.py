@@ -1,4 +1,7 @@
+from pydoc import text
 import textwrap
+import numpy as np
+import re
 import uuid
 from pathlib import Path
 import math
@@ -8,12 +11,21 @@ from PIL import Image, ImageDraw, ImageFont
 if not hasattr(Image, "ANTIALIAS"): 
     Image.ANTIALIAS = Image.Resampling.LANCZOS  
 from docx import Document
-from moviepy.editor import AudioFileClip, ImageClip, CompositeVideoClip, concatenate_videoclips
+from moviepy.editor import AudioFileClip, ImageClip, CompositeVideoClip, concatenate_videoclips,VideoClip,VideoFileClip
 from rest_framework import status
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.conf import settings
+from .pexels import download_video, search_image, download_image, search_video
+from .topic import get_summary, get_keywords
+from moviepy.editor import (
+    AudioFileClip,
+    ImageClip,
+    VideoFileClip,
+    CompositeVideoClip,
+    concatenate_videoclips
+)
 
 SUPPORTED_EXTENSIONS = {".pdf", ".docx", ".txt"}
 MAX_FILE_SIZE_MB = 20
@@ -53,31 +65,195 @@ def chunk_text(text: str, max_chars: int = 320) -> list[str]:
         return []
     return textwrap.wrap(cleaned, width=max_chars, break_long_words=False, break_on_hyphens=False)
 
-def render_slide_image(text: str, width=VIDEO_SIZE[0], margin=80, background=(16, 22, 37), font_size=32) -> Image.Image:
-    """Render text into a tall image to scroll through."""
+def render_slide_image(
+    text: str,
+    highlighted_chars: int = 0,
+    image_path=None,
+    width=VIDEO_SIZE[0],
+    margin=60,
+    background=(16, 22, 37),
+    font_size=32
+) -> Image.Image:
+    """Render text on the left and related image on the right."""
+
     draw_font = None
     try:
         draw_font = ImageFont.truetype("arial.ttf", font_size)
     except OSError:
         draw_font = ImageFont.load_default()
 
-    wrapper = textwrap.TextWrapper(width=90)
+    # Reserve space for the image on the right
+    image_area_width = 430
+    text_area_width = width - image_area_width - (margin * 2)
+
+    # Convert pixel width into an approximate textwrap width
+    chars_per_line = max(30, int(text_area_width / (font_size * 0.55)))
+
+    wrapper = textwrap.TextWrapper(
+        width=chars_per_line,
+        break_long_words=False,
+        break_on_hyphens=False
+    )
+
     lines = []
+
     for paragraph in text.splitlines() or [""]:
         wrapped = wrapper.wrap(paragraph) or [""]
         lines.extend(wrapped)
         lines.append("")
+
     if lines:
-        lines.pop() 
+        lines.pop()
 
     line_height = draw_font.size + 8
-    height = max(VIDEO_SIZE[1], (len(lines) + 2) * line_height + margin * 2)
+
+    height = max(
+        VIDEO_SIZE[1],
+        (len(lines) + 2) * line_height + margin * 2
+    )
+
     img = Image.new("RGB", (width, height), background)
     draw = ImageDraw.Draw(img)
+
+    # Draw the related image on the right
+    if image_path:
+        visual = Image.open(image_path).convert("RGB")
+
+        visual.thumbnail(
+            (
+                image_area_width - 40,
+                VIDEO_SIZE[1] - (margin * 2)
+            )
+        )
+
+        image_x = width - image_area_width + 20
+        image_y = margin
+
+        img.paste(visual, (image_x, image_y))
+
+    # Draw text only inside the left area
     y = margin
+
+    char_count = 0
+
     for ln in lines:
-        draw.text((margin, y), ln, font=draw_font, fill=(240, 243, 248))
+        x = margin
+
+        for char in ln:
+
+            if char_count < highlighted_chars:
+                fill = (255, 215, 0)      # Yellow
+            else:
+                fill = (240, 243, 248)    # White
+
+            draw.text(
+                (x, y),
+                char,
+                font=draw_font,
+                fill=fill
+            )
+
+            x += draw.textlength(
+                char,
+                font=draw_font
+            )
+
+            char_count += 1
+
         y += line_height
+
+    return img
+
+
+
+def render_highlighted_text(
+    text: str,
+    highlighted_chars: int,
+    width=VIDEO_SIZE[0],
+    margin=60,
+    background=(16, 22, 37),
+    font_size=32
+) -> Image.Image:
+
+    try:
+        draw_font = ImageFont.truetype(
+            "arial.ttf",
+            font_size
+        )
+    except OSError:
+        draw_font = ImageFont.load_default()
+
+    image_area_width = 430
+    text_area_width = width - image_area_width - (margin * 2)
+
+    chars_per_line = max(
+        30,
+        int(text_area_width / (font_size * 0.55))
+    )
+
+    wrapper = textwrap.TextWrapper(
+        width=chars_per_line,
+        break_long_words=False,
+        break_on_hyphens=False
+    )
+
+    lines = []
+
+    for paragraph in text.splitlines() or [""]:
+        wrapped = wrapper.wrap(paragraph) or [""]
+        lines.extend(wrapped)
+        lines.append("")
+
+    if lines:
+        lines.pop()
+
+    line_height = draw_font.size + 8
+
+    height = max(
+        VIDEO_SIZE[1],
+        (len(lines) + 2) * line_height + margin * 2
+    )
+
+    img = Image.new(
+        "RGB",
+        (width, height),
+        background
+    )
+
+    draw = ImageDraw.Draw(img)
+
+    # Track how many characters have been drawn
+    char_count = 0
+
+    y = margin
+
+    for line in lines:
+
+        for char in line:
+
+            if char_count < highlighted_chars:
+                fill = (255, 215, 0)   # Yellow
+            else:
+                fill = (240, 243, 248) # White
+
+            draw.text(
+                (margin, y),
+                char,
+                font=draw_font,
+                fill=fill
+            )
+
+            char_width = draw.textlength(
+                char,
+                font=draw_font
+            )
+
+            margin += char_width
+            char_count += 1
+
+        margin = 60
+        y += line_height
+
     return img
 
 def generate_audio(text: str, audio_path: Path):
@@ -94,78 +270,323 @@ def generate_audio(text: str, audio_path: Path):
     engine.runAndWait()
     return AudioFileClip(str(audio_path))
 
+def split_sentences(text: str):
+    sentences = re.split(r'(?<=[.!?])\s+', text.strip())
+    return [s.strip() for s in sentences if s.strip()]
+
+def get_sentence_timings(text: str, workdir: Path):
+    sentences = split_sentences(text)
+    timings = []
+    current_time = 0.0
+
+    for i, sentence in enumerate(sentences, start=1):
+        audio_path = workdir / f"timing_{i}.wav"
+
+        audio = generate_audio(
+            sentence,
+            audio_path
+        )
+
+        start = current_time
+        end = current_time + audio.duration
+
+        timings.append({
+            "text": sentence,
+            "start": start,
+            "end": end,
+        })
+
+        current_time = end
+
+    return timings
+
 def render_pdf_pages(src_path: Path, workdir: Path) -> list[Path]:
     doc = pdfium.PdfDocument(str(src_path))
-    image_paths: list[Path] = []
-    target_width = VIDEO_SIZE[0]
-    for i, page in enumerate(doc):
-        scale = target_width / page.get_width()
-        pil_image = page.render(scale=scale).to_pil()
-        out = workdir / f"page_{i}.png"
-        pil_image.save(out)
-        image_paths.append(out)
+
+    from .sections import split_into_sections, get_section_media
+
+    # Extract all PDF text
+    full_text = ""
+
+    for page in doc:
+        text_page = page.get_textpage()
+        page_text = text_page.get_text_range()
+
+        if page_text.strip():
+            full_text += page_text + "\n"
+
+    # Split PDF text into sections
+    sections = split_into_sections(full_text)
+
+    image_paths = []
+
+    # Create media for every section
+    for i, section in enumerate(sections, start=1):
+
+        media = get_section_media(
+            section,
+            workdir,
+            i
+        )
+
+        # Create controlled text layer
+        text_img = render_slide_image(section)
+
+        text_path = workdir / f"section_{i}_text.png"
+        text_img.save(text_path)
+
+        image_paths.append(
+            (text_path, section)
+        )
+
+        """if media["image_path"]:
+            image_paths.append(
+                media["image_path"]
+            )"""
+
+        if media["video_path"]:
+            image_paths.append(
+                media["video_path"]
+            )
+
     return image_paths
 
 def render_text_doc(src_path: Path, workdir: Path, ext: str, narration_enabled) -> list[Path]:
     if ext == ".txt":
         text = src_path.read_text(encoding="utf-8", errors="ignore")
-    else: 
+    else:
         doc = Document(src_path)
         text = "\n".join(p.text for p in doc.paragraphs)
+
+    from .sections import split_into_sections, get_section_media
+
+    sections = split_into_sections(text)
+
     image_paths = []
 
-    img = render_slide_image(text)
-    out = workdir / "page_0.png"
-    img.save(out)
+    for i, section in enumerate(sections, start=1):
+        media = get_section_media(section, workdir, i)
 
-    image_paths.append(out)
+        text_img = render_slide_image(section)
+
+        text_path = workdir / f"section_{i}_text.png"
+        text_img.save(text_path)
+
+        image_paths.append((text_path, section))
+
+        """if media["image_path"]:
+            image_paths.append(media["image_path"])"""
+
+        if media["video_path"]:
+            image_paths.append(media["video_path"])
 
     return image_paths
+def build_video_from_pages(
+    image_paths: list[Path],
+    output_path: Path,
+    audio_clip: AudioFileClip | None = None
+):
+    section_clips = []
+    section_audios = []
 
-def build_video_from_pages(image_paths: list[Path], output_path: Path, audio_clip: AudioFileClip | None = None):
-    clips = []
-    base_durations = []
-    scroll_distances = []
+    for i in range(0, len(image_paths), 2):
 
-    for img_path in image_paths:
-        img_clip = ImageClip(str(img_path)).resize(width=VIDEO_SIZE[0])
-        scroll_distance = max(0, img_clip.h - VIDEO_SIZE[1])
-        base_duration = max(MIN_PAGE_DURATION, scroll_distance / SCROLL_PX_PER_SEC if scroll_distance else MIN_PAGE_DURATION)
-        base_durations.append(base_duration)
-        scroll_distances.append(scroll_distance)
-        clips.append({"img": img_clip})
+        text_path, section_text = image_paths[i]
 
-    total_base = sum(base_durations) or MIN_PAGE_DURATION
-    target_total = audio_clip.duration if audio_clip else total_base
-    scale = max(1.0, target_total / total_base) if total_base else 1.0
+        section_number = (i // 2) + 1
 
-    composed_clips = []
-    for idx, clip_info in enumerate(clips):
-        img_clip = clip_info["img"]
-        scroll_distance = scroll_distances[idx]
-        duration = base_durations[idx] * scale
-        scroll_speed = scroll_distance / duration if scroll_distance else 0
+        # Generate narration for this section
+        section_audio_path = (
+            output_path.parent / f"section_{section_number}.wav"
+        )
 
-        def _pos(t, sd=scroll_distance, sp=scroll_speed):
-            offset = min(sd, t * sp)
-            return (0, -offset)
+        section_audio = generate_audio(
+            section_text,
+            section_audio_path
+        )
 
-        moving = img_clip.set_position(_pos).set_duration(duration)
-        composed = CompositeVideoClip([moving], size=VIDEO_SIZE, bg_color=(10, 12, 20)).set_duration(duration)
-        composed_clips.append(composed)
+        duration = max(
+            MIN_PAGE_DURATION,
+            section_audio.duration
+        )
 
-    video_body = concatenate_videoclips(composed_clips, method="compose")
+        section_audios.append(section_audio)
 
-    if audio_clip:
-        video_body = video_body.set_audio(audio_clip.set_duration(video_body.duration))
+        # Get this section's video
+        related_video_path = (
+            image_paths[i + 1]
+            if i + 1 < len(image_paths)
+            else None
+        )
 
-    output_path.parent.mkdir(parents=True, exist_ok=True)
+        print("SECTION:", section_number)
+        print("TEXT:", text_path)
+        print("VIDEO:", related_video_path)
+        print("AUDIO DURATION:", section_audio.duration)
+
+        # Create text clip
+        text_img = render_slide_image(
+        section_text,
+        highlighted_chars=0
+        )
+
+        text_clip = ImageClip(
+            np.array(text_img)
+        )
+
+        total_chars = len(section_text)
+
+        scroll_distance = max(
+            0,
+            text_clip.h - VIDEO_SIZE[1]
+        )
+
+        scroll_speed = (
+            scroll_distance / duration
+            if scroll_distance
+            else 0
+        )
+
+        def text_position(
+            t,
+            sd=scroll_distance,
+            sp=scroll_speed
+        ):
+            offset = min(
+                sd,
+                t * sp
+            )
+            return (
+                0,
+                150 - offset
+            )
+
+        sentence_timings = get_sentence_timings(
+            section_text,
+            output_path.parent
+        )
+
+        def make_text_frame(
+            t,
+            current_text=section_text,
+            current_duration=duration,
+            current_total_chars=total_chars
+        ):
+            progress = min(
+                1.0,
+                t / current_duration
+            )
+
+            highlighted_chars = int(
+                current_total_chars * progress
+            )
+
+            frame = render_slide_image(
+                current_text,
+                highlighted_chars=highlighted_chars
+            )
+
+            return np.array(frame)
+
+
+        moving_text = VideoClip(
+            make_text_frame,
+            duration=duration
+        ).set_position(
+            text_position
+        )
+
+        layers = [moving_text]
+
+        # Add related video
+        if related_video_path:
+
+            related_video = VideoFileClip(
+                str(related_video_path)
+            )
+
+            max_width = 450
+            max_height = 350
+
+            scale = max(
+                max_width / related_video.w,
+                max_height / related_video.h
+            )
+
+            related_video = related_video.resize(
+                scale
+            )
+
+            related_video = related_video.crop(
+                x_center=related_video.w / 2,
+                y_center=related_video.h / 2,
+                width=max_width,
+                height=max_height
+            )
+
+            # Repeat video if shorter than narration
+            if related_video.duration < duration:
+
+                loops = math.ceil(
+                    duration / related_video.duration
+                )
+
+                related_video = concatenate_videoclips(
+                    [related_video] * loops
+                )
+
+            related_video = related_video.subclip(
+                0,
+                duration
+            )
+
+            related_video = (
+                related_video
+                .set_position(
+                    (
+                        VIDEO_SIZE[0] - related_video.w - 60,
+                        (VIDEO_SIZE[1] - related_video.h) // 2
+                    )
+                )
+                .set_duration(duration)
+            )
+
+            layers.append(related_video)
+
+        # Combine text + video
+        composed = CompositeVideoClip(
+            layers,
+            size=VIDEO_SIZE,
+            bg_color=(10, 12, 20)
+        ).set_duration(duration)
+
+        # Add this section's narration
+        composed = composed.set_audio(
+            section_audio.set_duration(duration)
+        )
+
+        section_clips.append(composed)
+
+    # Combine all sections
+    video_body = concatenate_videoclips(
+        section_clips,
+        method="compose"
+    )
+
+    output_path.parent.mkdir(
+        parents=True,
+        exist_ok=True
+    )
+
+    temp_audio = output_path.parent / "temp_audio.m4a"
+
     video_body.write_videofile(
         str(output_path),
         fps=24,
         codec="libx264",
-        audio=bool(audio_clip),
-        audio_codec="aac" if audio_clip else None,
+        audio=True,
+        audio_codec="aac",
+        temp_audiofile=str(temp_audio),
         verbose=False,
         logger=None,
     )
@@ -205,19 +626,12 @@ class DocumentToVideoView(APIView):
                 image_paths = render_pdf_pages(src_path, workdir)
             else:
                 image_paths = render_text_doc(src_path, workdir, ext,  narration_enabled)
+            print("NEW IMAGE PATHS:", image_paths)
+
             video_path = workdir / "video.mp4"
             audio_clip = None
 
-            if narration_enabled:
-                try:
-                    full_text = extract_text(src_path)
-
-                    if full_text.strip():
-                        audio_path = workdir / "narration.wav"
-                        audio_clip = generate_audio(full_text, audio_path)
-
-                except Exception:
-                    audio_clip = None
+            
 
             build_video_from_pages(image_paths, video_path, audio_clip)
         except Exception as exc:  
