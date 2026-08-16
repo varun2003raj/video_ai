@@ -109,16 +109,25 @@ def render_pdf_pages(src_path: Path, workdir: Path) -> list[Path]:
 def render_text_doc(src_path: Path, workdir: Path, ext: str, narration_enabled) -> list[Path]:
     if ext == ".txt":
         text = src_path.read_text(encoding="utf-8", errors="ignore")
-    else: 
+    else:
         doc = Document(src_path)
         text = "\n".join(p.text for p in doc.paragraphs)
+
     image_paths = []
 
-    img = render_slide_image(text)
-    out = workdir / "page_0.png"
-    img.save(out)
+    # Split the document into smaller chunks
+    chunks = chunk_text(text, max_chars=600)
 
-    image_paths.append(out)
+    for index, chunk in enumerate(chunks):
+        img = render_slide_image(chunk)
+
+        out = workdir / f"page_{index}.png"
+        img.save(out)
+
+        image_paths.append(out)
+
+        # Release the image from memory
+        img.close()
 
     return image_paths
 
