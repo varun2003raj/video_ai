@@ -53,31 +53,74 @@ def chunk_text(text: str, max_chars: int = 320) -> list[str]:
         return []
     return textwrap.wrap(cleaned, width=max_chars, break_long_words=False, break_on_hyphens=False)
 
-def render_slide_image(text: str, width=VIDEO_SIZE[0], margin=80, background=(16, 22, 37), font_size=32) -> Image.Image:
-    """Render text into a tall image to scroll through."""
-    draw_font = None
+def render_slide_image(
+    text: str,
+    width=VIDEO_SIZE[0],
+    height=VIDEO_SIZE[1],
+    margin=80,
+    background=(16, 22, 37),
+    font_size=32
+) -> Image.Image:
+
     try:
         draw_font = ImageFont.truetype("arial.ttf", font_size)
     except OSError:
         draw_font = ImageFont.load_default()
 
-    wrapper = textwrap.TextWrapper(width=90)
-    lines = []
-    for paragraph in text.splitlines() or [""]:
-        wrapped = wrapper.wrap(paragraph) or [""]
-        lines.extend(wrapped)
-        lines.append("")
-    if lines:
-        lines.pop() 
-
-    line_height = draw_font.size + 8
-    height = max(VIDEO_SIZE[1], (len(lines) + 2) * line_height + margin * 2)
     img = Image.new("RGB", (width, height), background)
     draw = ImageDraw.Draw(img)
-    y = margin
-    for ln in lines:
-        draw.text((margin, y), ln, font=draw_font, fill=(240, 243, 248))
+
+    # Maximum text width inside the slide
+    max_width = width - (margin * 2)
+
+    # Wrap text based on actual pixel width
+    lines = []
+
+    for paragraph in text.splitlines():
+        words = paragraph.split()
+        current_line = ""
+
+        for word in words:
+            test_line = f"{current_line} {word}".strip()
+
+            bbox = draw.textbbox((0, 0), test_line, font=draw_font)
+            text_width = bbox[2] - bbox[0]
+
+            if text_width <= max_width:
+                current_line = test_line
+            else:
+                if current_line:
+                    lines.append(current_line)
+                current_line = word
+
+        if current_line:
+            lines.append(current_line)
+
+    # Keep text inside the slide
+    line_height = font_size + 12
+    max_lines = (height - margin * 2) // line_height
+
+    lines = lines[:max_lines]
+
+    # Center the text vertically
+    total_height = len(lines) * line_height
+    y = (height - total_height) // 2
+
+    for line in lines:
+        bbox = draw.textbbox((0, 0), line, font=draw_font)
+        text_width = bbox[2] - bbox[0]
+
+        x = (width - text_width) // 2
+
+        draw.text(
+            (x, y),
+            line,
+            font=draw_font,
+            fill=(240, 243, 248)
+        )
+
         y += line_height
+
     return img
 
 def generate_audio(text: str, audio_path: Path):
@@ -177,7 +220,7 @@ def build_video_from_pages(
 
     if audio_clip:
         audio_clip.close()
-        
+
 class HealthView(APIView):
     def get(self, _request):
         return Response({"status": "ok"})
