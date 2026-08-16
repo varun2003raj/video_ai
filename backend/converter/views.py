@@ -15,6 +15,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.conf import settings
 
+import asyncio
+import edge_tts
+
 SUPPORTED_EXTENSIONS = {".pdf", ".docx", ".txt"}
 MAX_FILE_SIZE_MB = 20
 VIDEO_SIZE = (1280, 720)
@@ -124,18 +127,34 @@ def render_slide_image(
     return img
 
 def generate_audio(text: str, audio_path: Path):
-    import pyttsx3
+    
 
-    engine = pyttsx3.init()
-    if TTS_VOICE:
-        try:
-            engine.setProperty("voice", TTS_VOICE)
-        except Exception:
-            pass
-    engine.setProperty("rate", TTS_RATE)
-    engine.save_to_file(text, str(audio_path))
-    engine.runAndWait()
+    async def create_audio():
+        communicate = edge_tts.Communicate(
+            text,
+            "en-US-AriaNeural",
+            rate="+0%"
+        )
+        await communicate.save(str(audio_path))
+
+    asyncio.run(create_audio())
+
     return AudioFileClip(str(audio_path))
+
+def generate_audio_for_chunks(chunks: list[str], workdir: Path):
+    audio_clips = []
+
+    for index, chunk in enumerate(chunks):
+        audio_path = workdir / f"audio_{index}.mp3"
+
+        try:
+            audio_clip = generate_audio(chunk, audio_path)
+            audio_clips.append(audio_clip)
+        except Exception as exc:
+            print(f"TTS ERROR for chunk {index}: {exc}")
+            audio_clips.append(None)
+
+    return audio_clips
 
 def render_pdf_pages(src_path: Path, workdir: Path) -> list[Path]:
     doc = pdfium.PdfDocument(str(src_path))
@@ -149,54 +168,67 @@ def render_pdf_pages(src_path: Path, workdir: Path) -> list[Path]:
         image_paths.append(out)
     return image_paths
 
-def render_text_doc(src_path: Path, workdir: Path, ext: str, narration_enabled) -> list[Path]:
+def render_text_doc(
+    src_path: Path,
+    workdir: Path,
+    ext: str,
+    narration_enabled
+) -> tuple[list[Path], list[str]]:
+
     if ext == ".txt":
-        text = src_path.read_text(encoding="utf-8", errors="ignore")
+        text = src_path.read_text(
+            encoding="utf-8",
+            errors="ignore"
+        )
     else:
         doc = Document(src_path)
         text = "\n".join(p.text for p in doc.paragraphs)
 
-    image_paths = []
-
-    # Split the document into smaller chunks
     chunks = chunk_text(text, max_chars=600)
+
+    image_paths = []
 
     for index, chunk in enumerate(chunks):
         img = render_slide_image(chunk)
 
         out = workdir / f"page_{index}.png"
         img.save(out)
+        img.close()
 
         image_paths.append(out)
 
-        # Release the image from memory
-        img.close()
-
-    return image_paths
+    return image_paths, chunks
 
 def build_video_from_pages(
     image_paths: list[Path],
     output_path: Path,
-    audio_clip: AudioFileClip | None = None
+    audio_clips=None
 ):
     clips = []
 
-    # Create simple static clips instead of CompositeVideoClip
-    for img_path in image_paths:
-        img_clip = ImageClip(str(img_path)).set_duration(MIN_PAGE_DURATION)
+    for index, img_path in enumerate(image_paths):
+
+        # Use the matching audio duration
+        if audio_clips and index < len(audio_clips) and audio_clips[index]:
+            duration = audio_clips[index].duration
+        else:
+            duration = MIN_PAGE_DURATION
+
+        img_clip = ImageClip(str(img_path)).set_duration(duration)
+
+        # Attach matching voice to this slide
+        if audio_clips and index < len(audio_clips) and audio_clips[index]:
+            img_clip = img_clip.set_audio(audio_clips[index])
+
         clips.append(img_clip)
 
     if not clips:
         raise ValueError("No images were generated.")
 
-    # Join simple clips
-    video_body = concatenate_videoclips(clips, method="chain")
-
-    # Add narration if enabled
-    if audio_clip:
-        video_body = video_body.set_audio(
-            audio_clip.set_duration(video_body.duration)
-        )
+    video_body = concatenate_videoclips(
+        clips,
+        method="chain"
+    )
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -204,22 +236,23 @@ def build_video_from_pages(
         str(output_path),
         fps=24,
         codec="libx264",
-        audio=bool(audio_clip),
-        audio_codec="aac" if audio_clip else None,
+        audio=True,
+        audio_codec="aac",
         preset="ultrafast",
         threads=1,
         verbose=False,
         logger=None,
     )
 
-    # Release resources
     video_body.close()
 
     for clip in clips:
         clip.close()
 
-    if audio_clip:
-        audio_clip.close()
+    if audio_clips:
+        for audio in audio_clips:
+            if audio:
+                audio.close()
 
 class HealthView(APIView):
     def get(self, _request):
@@ -254,23 +287,23 @@ class DocumentToVideoView(APIView):
         try:
             if ext == ".pdf":
                 image_paths = render_pdf_pages(src_path, workdir)
+                chunks = []
             else:
-                image_paths = render_text_doc(src_path, workdir, ext,  narration_enabled)
+                image_paths, chunks = render_text_doc(src_path, workdir, ext,  narration_enabled)
             video_path = workdir / "video.mp4"
-            audio_clip = None
+            audio_clips = []
 
-            if narration_enabled:
+            if narration_enabled and chunks:
                 try:
-                    full_text = extract_text(src_path)
+                    audio_clips = generate_audio_for_chunks(
+                        chunks,
+                        workdir
+                    )
+                except Exception as exc:
+                    print("TTS ERROR:", exc)
+                    audio_clips = []
 
-                    if full_text.strip():
-                        audio_path = workdir / "narration.wav"
-                        audio_clip = generate_audio(full_text, audio_path)
-
-                except Exception:
-                    audio_clip = None
-
-            build_video_from_pages(image_paths, video_path, audio_clip)
+            build_video_from_pages(image_paths, video_path, audio_clips)
         except Exception as exc:  
             return Response({"detail": f"Conversion failed: {exc}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 

@@ -7,3 +7,4 @@ pdfplumber==0.11.4
 Pillow==12.1.1
 pyttsx3==2.90
 gunicorn
+edge-tts
