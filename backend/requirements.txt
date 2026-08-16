@@ -1,0 +1,8 @@
+Django==5.1.2
+djangorestframework==3.15.2
+django-cors-headers==4.4.0
+moviepy==1.0.3
+python-docx==1.1.2
+pdfplumber==0.11.4
+Pillow==12.1.1
+pyttsx3==2.90
