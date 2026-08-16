@@ -204,56 +204,91 @@ def build_video_from_pages(
     output_path: Path,
     audio_clips=None
 ):
-    clips = []
+    if not image_paths:
+        raise ValueError("No images were generated.")
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Create one clip at a time and write each page as a temporary video.
+    temp_videos = []
 
     for index, img_path in enumerate(image_paths):
-
-        # Use the matching audio duration
         if audio_clips and index < len(audio_clips) and audio_clips[index]:
             duration = audio_clips[index].duration
         else:
             duration = MIN_PAGE_DURATION
 
-        img_clip = ImageClip(str(img_path)).set_duration(duration)
+        temp_video = output_path.parent / f"temp_{index}.mp4"
 
-        # Attach matching voice to this slide
+        clip = ImageClip(str(img_path)).set_duration(duration)
+
         if audio_clips and index < len(audio_clips) and audio_clips[index]:
-            img_clip = img_clip.set_audio(audio_clips[index])
+            clip = clip.set_audio(audio_clips[index])
 
-        clips.append(img_clip)
+        clip.write_videofile(
+            str(temp_video),
+            fps=24,
+            codec="libx264",
+            audio=bool(
+                audio_clips
+                and index < len(audio_clips)
+                and audio_clips[index]
+            ),
+            audio_codec="aac",
+            preset="ultrafast",
+            threads=1,
+            verbose=False,
+            logger=None,
+        )
 
-    if not clips:
-        raise ValueError("No images were generated.")
-
-    video_body = concatenate_videoclips(
-        clips,
-        method="chain"
-    )
-
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-
-    video_body.write_videofile(
-        str(output_path),
-        fps=24,
-        codec="libx264",
-        audio=True,
-        audio_codec="aac",
-        preset="ultrafast",
-        threads=1,
-        verbose=False,
-        logger=None,
-    )
-
-    video_body.close()
-
-    for clip in clips:
         clip.close()
+        temp_videos.append(temp_video)
+
+    # Concatenate the already-rendered videos with FFmpeg.
+    import subprocess
+
+    concat_file = output_path.parent / "concat.txt"
+
+    with concat_file.open("w", encoding="utf-8") as f:
+        for video in temp_videos:
+            f.write(f"file '{video.as_posix()}'\n")
+
+    subprocess.run(
+        [
+            "ffmpeg",
+            "-y",
+            "-f",
+            "concat",
+            "-safe",
+            "0",
+            "-i",
+            str(concat_file),
+            "-c",
+            "copy",
+            str(output_path),
+        ],
+        check=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+
+    # Clean temporary files
+    for video in temp_videos:
+        try:
+            video.unlink()
+        except OSError:
+            pass
+
+    try:
+        concat_file.unlink()
+    except OSError:
+        pass
 
     if audio_clips:
         for audio in audio_clips:
             if audio:
                 audio.close()
-
+                
 class HealthView(APIView):
     def get(self, _request):
         return Response({"status": "ok"})
