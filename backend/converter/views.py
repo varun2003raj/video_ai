@@ -131,54 +131,53 @@ def render_text_doc(src_path: Path, workdir: Path, ext: str, narration_enabled) 
 
     return image_paths
 
-def build_video_from_pages(image_paths: list[Path], output_path: Path, audio_clip: AudioFileClip | None = None):
+def build_video_from_pages(
+    image_paths: list[Path],
+    output_path: Path,
+    audio_clip: AudioFileClip | None = None
+):
     clips = []
-    base_durations = []
-    scroll_distances = []
 
+    # Create simple static clips instead of CompositeVideoClip
     for img_path in image_paths:
-        img_clip = ImageClip(str(img_path)).resize(width=VIDEO_SIZE[0])
-        scroll_distance = max(0, img_clip.h - VIDEO_SIZE[1])
-        base_duration = max(MIN_PAGE_DURATION, scroll_distance / SCROLL_PX_PER_SEC if scroll_distance else MIN_PAGE_DURATION)
-        base_durations.append(base_duration)
-        scroll_distances.append(scroll_distance)
-        clips.append({"img": img_clip})
+        img_clip = ImageClip(str(img_path)).set_duration(MIN_PAGE_DURATION)
+        clips.append(img_clip)
 
-    total_base = sum(base_durations) or MIN_PAGE_DURATION
-    target_total = audio_clip.duration if audio_clip else total_base
-    scale = max(1.0, target_total / total_base) if total_base else 1.0
+    if not clips:
+        raise ValueError("No images were generated.")
 
-    composed_clips = []
-    for idx, clip_info in enumerate(clips):
-        img_clip = clip_info["img"]
-        scroll_distance = scroll_distances[idx]
-        duration = base_durations[idx] * scale
-        scroll_speed = scroll_distance / duration if scroll_distance else 0
+    # Join simple clips
+    video_body = concatenate_videoclips(clips, method="chain")
 
-        def _pos(t, sd=scroll_distance, sp=scroll_speed):
-            offset = min(sd, t * sp)
-            return (0, -offset)
-
-        moving = img_clip.set_position(_pos).set_duration(duration)
-        composed = CompositeVideoClip([moving], size=VIDEO_SIZE, bg_color=(10, 12, 20)).set_duration(duration)
-        composed_clips.append(composed)
-
-    video_body = concatenate_videoclips(composed_clips, method="compose")
-
+    # Add narration if enabled
     if audio_clip:
-        video_body = video_body.set_audio(audio_clip.set_duration(video_body.duration))
+        video_body = video_body.set_audio(
+            audio_clip.set_duration(video_body.duration)
+        )
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
+
     video_body.write_videofile(
         str(output_path),
         fps=24,
         codec="libx264",
         audio=bool(audio_clip),
         audio_codec="aac" if audio_clip else None,
+        preset="ultrafast",
+        threads=1,
         verbose=False,
         logger=None,
     )
 
+    # Release resources
+    video_body.close()
+
+    for clip in clips:
+        clip.close()
+
+    if audio_clip:
+        audio_clip.close()
+        
 class HealthView(APIView):
     def get(self, _request):
         return Response({"status": "ok"})
