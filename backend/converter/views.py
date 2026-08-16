@@ -20,8 +20,9 @@ import edge_tts
 import subprocess
 
 SUPPORTED_EXTENSIONS = {".pdf", ".docx", ".txt"}
-MAX_FILE_SIZE_MB = 20
-VIDEO_SIZE = (1280, 720)
+MAX_FILE_SIZE_MB = 5
+MAX_PAGES = 10
+VIDEO_SIZE = (854, 480)
 SCROLL_PX_PER_SEC = 140 
 MIN_PAGE_DURATION = 4.0
 PAGE_GAP = 0
@@ -159,14 +160,25 @@ def generate_audio_for_chunks(chunks: list[str], workdir: Path):
 
 def render_pdf_pages(src_path: Path, workdir: Path) -> list[Path]:
     doc = pdfium.PdfDocument(str(src_path))
-    image_paths: list[Path] = []
+
+    if len(doc) > MAX_PAGES:
+        raise ValueError(
+            f"PDF has too many pages. Maximum allowed is {MAX_PAGES}."
+        )
+
+    image_paths = []
     target_width = VIDEO_SIZE[0]
+
     for i, page in enumerate(doc):
         scale = target_width / page.get_width()
         pil_image = page.render(scale=scale).to_pil()
+
         out = workdir / f"page_{i}.png"
-        pil_image.save(out)
+        pil_image.save(out, optimize=True)
+        pil_image.close()
+
         image_paths.append(out)
+
     return image_paths
 
 def render_text_doc(
