@@ -8,7 +8,7 @@ from PIL import Image, ImageDraw, ImageFont
 if not hasattr(Image, "ANTIALIAS"): 
     Image.ANTIALIAS = Image.Resampling.LANCZOS  
 from docx import Document
-from moviepy.editor import AudioFileClip, ImageClip, CompositeVideoClip, concatenate_videoclips
+from moviepy.editor import AudioFileClip
 from rest_framework import status
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
@@ -17,6 +17,7 @@ from django.conf import settings
 
 import asyncio
 import edge_tts
+import subprocess
 
 SUPPORTED_EXTENSIONS = {".pdf", ".docx", ".txt"}
 MAX_FILE_SIZE_MB = 20
@@ -209,70 +210,88 @@ def build_video_from_pages(
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Create one clip at a time and write each page as a temporary video.
     temp_videos = []
 
     for index, img_path in enumerate(image_paths):
         if audio_clips and index < len(audio_clips) and audio_clips[index]:
-            duration = audio_clips[index].duration
+            duration = max(float(audio_clips[index].duration), MIN_PAGE_DURATION)
         else:
             duration = MIN_PAGE_DURATION
 
         temp_video = output_path.parent / f"temp_{index}.mp4"
 
-        clip = ImageClip(str(img_path)).set_duration(duration)
+        # Build FFmpeg command for one slide.
+        cmd = [
+            "ffmpeg",
+            "-y",
+            "-loop", "1",
+            "-i", str(img_path),
+        ]
 
+        # Add matching audio
         if audio_clips and index < len(audio_clips) and audio_clips[index]:
-            clip = clip.set_audio(audio_clips[index])
+            audio_path = Path(audio_clips[index].filename)
 
-        clip.write_videofile(
-            str(temp_video),
-            fps=24,
-            codec="libx264",
-            audio=bool(
-                audio_clips
-                and index < len(audio_clips)
-                and audio_clips[index]
-            ),
-            audio_codec="aac",
-            preset="ultrafast",
-            threads=1,
-            verbose=False,
-            logger=None,
+            cmd.extend([
+                "-i", str(audio_path),
+                "-t", str(duration),
+                "-map", "0:v:0",
+                "-map", "1:a:0",
+                "-c:v", "libx264",
+                "-preset", "ultrafast",
+                "-threads", "1",
+                "-pix_fmt", "yuv420p",
+                "-c:a", "aac",
+                "-shortest",
+                str(temp_video),
+            ])
+
+        else:
+            cmd.extend([
+                "-t", str(duration),
+                "-c:v", "libx264",
+                "-preset", "ultrafast",
+                "-threads", "1",
+                "-pix_fmt", "yuv420p",
+                "-an",
+                str(temp_video),
+            ])
+
+        subprocess.run(
+            cmd,
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
+            text=True,
         )
 
-        clip.close()
         temp_videos.append(temp_video)
 
-    # Concatenate the already-rendered videos with FFmpeg.
-    import subprocess
-
+    # Create FFmpeg concat file.
     concat_file = output_path.parent / "concat.txt"
 
     with concat_file.open("w", encoding="utf-8") as f:
         for video in temp_videos:
             f.write(f"file '{video.as_posix()}'\n")
 
+    # Join the already encoded clips without re-encoding.
     subprocess.run(
         [
             "ffmpeg",
             "-y",
-            "-f",
-            "concat",
-            "-safe",
-            "0",
-            "-i",
-            str(concat_file),
-            "-c",
-            "copy",
+            "-f", "concat",
+            "-safe", "0",
+            "-i", str(concat_file),
+            "-c", "copy",
             str(output_path),
         ],
         check=True,
         stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+        stderr=subprocess.PIPE,
+        text=True,
     )
 
-    # Clean temporary files
+    # Clean temporary videos.
     for video in temp_videos:
         try:
             video.unlink()
@@ -284,11 +303,6 @@ def build_video_from_pages(
     except OSError:
         pass
 
-    if audio_clips:
-        for audio in audio_clips:
-            if audio:
-                audio.close()
-                
 class HealthView(APIView):
     def get(self, _request):
         return Response({"status": "ok"})
