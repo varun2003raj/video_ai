@@ -1,23 +1,25 @@
-import textwrap
+#import textwrap
 import uuid
 from pathlib import Path
-import math
-import pdfplumber
-import pypdfium2 as pdfium
-from PIL import Image, ImageDraw, ImageFont
-if not hasattr(Image, "ANTIALIAS"): 
-    Image.ANTIALIAS = Image.Resampling.LANCZOS  
-from docx import Document
-from moviepy.editor import AudioFileClip
+#import math
+#import pdfplumber
+#import pypdfium2 as pdfium
+#from PIL import Image, ImageDraw, ImageFont
+#if not hasattr(Image, "ANTIALIAS"): 
+#    Image.ANTIALIAS = Image.Resampling.LANCZOS  
+#from docx import Document
+#from moviepy.editor import AudioFileClip
 from rest_framework import status
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.conf import settings
+from .tasks import process_conversion
+from django.http import FileResponse
 
-import asyncio
-import edge_tts
-import subprocess
+#import asyncio
+#import edge_tts
+#import subprocess
 
 SUPPORTED_EXTENSIONS = {".pdf", ".docx", ".txt"}
 MAX_FILE_SIZE_MB = 5
@@ -52,272 +54,115 @@ def extract_text(src_path: Path) -> str:
         return "\n".join(text_parts)
     raise ValueError(f"Unsupported file extension: {suffix}")
 
-def chunk_text(text: str, max_chars: int = 320) -> list[str]:
-    cleaned = " ".join(text.split())
-    if not cleaned:
-        return []
-    return textwrap.wrap(cleaned, width=max_chars, break_long_words=False, break_on_hyphens=False)
 
-def render_slide_image(
-    text: str,
-    width=VIDEO_SIZE[0],
-    height=VIDEO_SIZE[1],
-    margin=80,
-    background=(16, 22, 37),
-    font_size=32
-) -> Image.Image:
 
-    try:
-        draw_font = ImageFont.truetype("arial.ttf", font_size)
-    except OSError:
-        draw_font = ImageFont.load_default()
 
-    img = Image.new("RGB", (width, height), background)
-    draw = ImageDraw.Draw(img)
 
-    # Maximum text width inside the slide
-    max_width = width - (margin * 2)
 
-    # Wrap text based on actual pixel width
-    lines = []
 
-    for paragraph in text.splitlines():
-        words = paragraph.split()
-        current_line = ""
 
-        for word in words:
-            test_line = f"{current_line} {word}".strip()
 
-            bbox = draw.textbbox((0, 0), test_line, font=draw_font)
-            text_width = bbox[2] - bbox[0]
 
-            if text_width <= max_width:
-                current_line = test_line
-            else:
-                if current_line:
-                    lines.append(current_line)
-                current_line = word
 
-        if current_line:
-            lines.append(current_line)
 
-    # Keep text inside the slide
-    line_height = font_size + 12
-    max_lines = (height - margin * 2) // line_height
-
-    lines = lines[:max_lines]
-
-    # Center the text vertically
-    total_height = len(lines) * line_height
-    y = (height - total_height) // 2
-
-    for line in lines:
-        bbox = draw.textbbox((0, 0), line, font=draw_font)
-        text_width = bbox[2] - bbox[0]
-
-        x = (width - text_width) // 2
-
-        draw.text(
-            (x, y),
-            line,
-            font=draw_font,
-            fill=(240, 243, 248)
-        )
-
-        y += line_height
-
-    return img
-
-def generate_audio(text: str, audio_path: Path):
-    
-
-    async def create_audio():
-        communicate = edge_tts.Communicate(
-            text,
-            "en-US-AriaNeural",
-            rate="+0%"
-        )
-        await communicate.save(str(audio_path))
-
-    asyncio.run(create_audio())
-
-    return AudioFileClip(str(audio_path))
-
-def generate_audio_for_chunks(chunks: list[str], workdir: Path):
-    audio_clips = []
-
-    for index, chunk in enumerate(chunks):
-        audio_path = workdir / f"audio_{index}.mp3"
-
-        try:
-            audio_clip = generate_audio(chunk, audio_path)
-            audio_clips.append(audio_clip)
-        except Exception as exc:
-            print(f"TTS ERROR for chunk {index}: {exc}")
-            audio_clips.append(None)
-
-    return audio_clips
-
-def render_pdf_pages(src_path: Path, workdir: Path) -> list[Path]:
-    doc = pdfium.PdfDocument(str(src_path))
-
-    if len(doc) > MAX_PAGES:
-        raise ValueError(
-            f"PDF has too many pages. Maximum allowed is {MAX_PAGES}."
-        )
-
-    image_paths = []
-    target_width = VIDEO_SIZE[0]
-
-    for i, page in enumerate(doc):
-        scale = target_width / page.get_width()
-        pil_image = page.render(scale=scale).to_pil()
-
-        out = workdir / f"page_{i}.png"
-        pil_image.save(out, optimize=True)
-        pil_image.close()
-
-        image_paths.append(out)
-
-    return image_paths
-
-def render_text_doc(
-    src_path: Path,
-    workdir: Path,
-    ext: str,
-    narration_enabled
-) -> tuple[list[Path], list[str]]:
-
-    if ext == ".txt":
-        text = src_path.read_text(
-            encoding="utf-8",
-            errors="ignore"
-        )
-    else:
-        doc = Document(src_path)
-        text = "\n".join(p.text for p in doc.paragraphs)
-
-    chunks = chunk_text(text, max_chars=600)
-
-    image_paths = []
-
-    for index, chunk in enumerate(chunks):
-        img = render_slide_image(chunk)
-
-        out = workdir / f"page_{index}.png"
-        img.save(out)
-        img.close()
-
-        image_paths.append(out)
-
-    return image_paths, chunks
-
-def build_video_from_pages(
-    image_paths: list[Path],
-    output_path: Path,
-    audio_clips=None
-):
-    if not image_paths:
-        raise ValueError("No images were generated.")
-
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-
-    temp_videos = []
-
-    for index, img_path in enumerate(image_paths):
-        if audio_clips and index < len(audio_clips) and audio_clips[index]:
-            duration = max(float(audio_clips[index].duration), MIN_PAGE_DURATION)
-        else:
-            duration = MIN_PAGE_DURATION
-
-        temp_video = output_path.parent / f"temp_{index}.mp4"
-
-        # Build FFmpeg command for one slide.
-        cmd = [
-            "ffmpeg",
-            "-y",
-            "-loop", "1",
-            "-i", str(img_path),
-        ]
-
-        # Add matching audio
-        if audio_clips and index < len(audio_clips) and audio_clips[index]:
-            audio_path = Path(audio_clips[index].filename)
-
-            cmd.extend([
-                "-i", str(audio_path),
-                "-t", str(duration),
-                "-map", "0:v:0",
-                "-map", "1:a:0",
-                "-c:v", "libx264",
-                "-preset", "ultrafast",
-                "-threads", "1",
-                "-pix_fmt", "yuv420p",
-                "-c:a", "aac",
-                "-shortest",
-                str(temp_video),
-            ])
-
-        else:
-            cmd.extend([
-                "-t", str(duration),
-                "-c:v", "libx264",
-                "-preset", "ultrafast",
-                "-threads", "1",
-                "-pix_fmt", "yuv420p",
-                "-an",
-                str(temp_video),
-            ])
-
-        subprocess.run(
-            cmd,
-            check=True,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.PIPE,
-            text=True,
-        )
-
-        temp_videos.append(temp_video)
-
-    # Create FFmpeg concat file.
-    concat_file = output_path.parent / "concat.txt"
-
-    with concat_file.open("w", encoding="utf-8") as f:
-        for video in temp_videos:
-            f.write(f"file '{video.as_posix()}'\n")
-
-    # Join the already encoded clips without re-encoding.
-    subprocess.run(
-        [
-            "ffmpeg",
-            "-y",
-            "-f", "concat",
-            "-safe", "0",
-            "-i", str(concat_file),
-            "-c", "copy",
-            str(output_path),
-        ],
-        check=True,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.PIPE,
-        text=True,
-    )
-
-    # Clean temporary videos.
-    for video in temp_videos:
-        try:
-            video.unlink()
-        except OSError:
-            pass
-
-    try:
-        concat_file.unlink()
-    except OSError:
-        pass
 
 class HealthView(APIView):
     def get(self, _request):
         return Response({"status": "ok"})
+
+class VideoStreamView(APIView):
+
+    def get(self, request, job_id):
+        video_path = (
+            Path(settings.MEDIA_ROOT)
+            / "jobs"
+            / job_id
+            / "video.mp4"
+        )
+
+        if not video_path.exists():
+            return Response(
+                {"detail": "Video not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        file_size = video_path.stat().st_size
+        range_header = request.headers.get("Range")
+
+        if not range_header:
+            response = FileResponse(
+                open(video_path, "rb"),
+                content_type="video/mp4",
+            )
+            response["Content-Length"] = str(file_size)
+            response["Accept-Ranges"] = "bytes"
+            response["Content-Disposition"] = (
+                'inline; filename="video.mp4"'
+            )
+
+            response["Access-Control-Allow-Origin"] = "*"
+            
+            return response
+
+        try:
+            range_value = range_header.strip().lower()
+
+            if not range_value.startswith("bytes="):
+                raise ValueError
+
+            range_value = range_value.replace("bytes=", "", 1)
+            start_str, end_str = range_value.split("-", 1)
+
+            if start_str:
+                start = int(start_str)
+            else:
+                start = 0
+
+            if end_str:
+                end = int(end_str)
+            else:
+                end = file_size - 1
+
+            end = min(end, file_size - 1)
+
+            if start > end or start >= file_size:
+                return Response(
+                    status=416,
+                    headers={
+                        "Content-Range": f"bytes */{file_size}"
+                    },
+                )
+
+        except (ValueError, IndexError):
+            return Response(
+                {"detail": "Invalid Range header."},
+                status=416,
+                headers={
+                    "Content-Range": f"bytes */{file_size}"
+                },
+            )
+
+        length = end - start + 1
+
+        video_file = open(video_path, "rb")
+        video_file.seek(start)
+
+        response = FileResponse(
+            video_file,
+            status=206,
+            content_type="video/mp4",
+        )
+
+        response["Content-Length"] = str(length)
+        response["Content-Range"] = (
+            f"bytes {start}-{end}/{file_size}"
+        )
+        response["Accept-Ranges"] = "bytes"
+        response["Content-Disposition"] = (
+            'inline; filename="video.mp4"'
+        )
+
+        return response
 
 class DocumentToVideoView(APIView):
     parser_classes = (MultiPartParser, FormParser)
@@ -328,45 +173,85 @@ class DocumentToVideoView(APIView):
         narration_enabled = request.data.get("narration") == "true"
 
         if not upload:
-            return Response({"detail": "Attach a document file as 'file'."}, status=status.HTTP_400_BAD_REQUEST)
-
-        if upload.size > MAX_FILE_SIZE_MB * 1024 * 1024:
-            return Response({"detail": f"File too large. Limit is {MAX_FILE_SIZE_MB} MB."}, status=status.HTTP_400_BAD_REQUEST)
-
-        ext = Path(upload.name).suffix.lower()
-        if ext not in SUPPORTED_EXTENSIONS:
             return Response(
-                {"detail": f"Unsupported format '{ext}'. Use .pdf, .docx, or .txt."},
+                {"detail": "Attach a document file as 'file'."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        if upload.size > MAX_FILE_SIZE_MB * 1024 * 1024:
+            return Response(
+                {
+                    "detail": (
+                        f"File too large. Limit is "
+                        f"{MAX_FILE_SIZE_MB} MB."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        ext = Path(upload.name).suffix.lower()
+
+        if ext not in SUPPORTED_EXTENSIONS:
+            return Response(
+                {
+                    "detail": (
+                        f"Unsupported format '{ext}'. "
+                        "Use .pdf, .docx, or .txt."
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Create job
         job_id = uuid.uuid4().hex
-        workdir = Path(settings.MEDIA_ROOT) / "jobs" / job_id
+
+        workdir = (
+            Path(settings.MEDIA_ROOT)
+            / "jobs"
+            / job_id
+        )
+
+        workdir.mkdir(parents=True, exist_ok=True)
+
+        # Save uploaded document
         src_path = workdir / f"source{ext}"
         save_upload(upload, src_path)
 
-        try:
-            if ext == ".pdf":
-                image_paths = render_pdf_pages(src_path, workdir)
-                chunks = []
-            else:
-                image_paths, chunks = render_text_doc(src_path, workdir, ext,  narration_enabled)
-            video_path = workdir / "video.mp4"
-            audio_clips = []
+        # Send the job to the background worker
+        process_conversion.delay(
+            job_id=job_id,
+            src_path=str(src_path),
+            ext=ext,
+            narration_enabled=narration_enabled,
+            title=title,
+        )
 
-            if narration_enabled and chunks:
-                try:
-                    audio_clips = generate_audio_for_chunks(
-                        chunks,
-                        workdir
-                    )
-                except Exception as exc:
-                    print("TTS ERROR:", exc)
-                    audio_clips = []
+        return Response(
+            {
+                "job_id": job_id,
+                "status": "queued",
+            },
+            status=status.HTTP_202_ACCEPTED,
+        )
 
-            build_video_from_pages(image_paths, video_path, audio_clips)
-        except Exception as exc:  
-            return Response({"detail": f"Conversion failed: {exc}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+class JobStatusView(APIView):
 
-        video_url = request.build_absolute_uri(settings.MEDIA_URL + f"jobs/{job_id}/video.mp4")
-        return Response({"video_url": video_url, "job_id": job_id}, status=status.HTTP_201_CREATED)
+    def get(self, request, job_id):
+        workdir = Path(settings.MEDIA_ROOT) / "jobs" / job_id
+        video_path = workdir / "video.mp4"
+
+        if video_path.exists():
+            video_url = (
+                f"http://127.0.0.1:8000/api/jobs/{job_id}/video/"
+            )
+
+            return Response({
+                "job_id": job_id,
+                "status": "completed",
+                "video_url": video_url,
+            })
+
+        return Response({
+            "job_id": job_id,
+            "status": "processing",
+        })

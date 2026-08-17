@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environment
+.venv/
+venv/
+
+# Environment files
+.env
+*.env
+
+# Django
+db.sqlite3
+staticfiles/
+
+# Generated media
+media/
+*.mp4
+*.mp3
+*.wav
+
+# Node
+node_modules/
+dist/
+
+# IDE
+.vscode/
+.idea/

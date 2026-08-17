@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import './App.css'
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api'
 
 function App() {
   const [file, setFile] = useState(null)
@@ -20,51 +20,97 @@ function App() {
   }, [file])
 
   const handleSubmit = async (event) => {
-    event.preventDefault()
-    if (!file) {
-      setMessage('Please choose a document first.')
-      return
+  event.preventDefault()
+
+  if (!file) {
+    setMessage('Please choose a document first.')
+    return
+  }
+
+  const formData = new FormData()
+  formData.append('file', file)
+
+  if (title.trim()) {
+    formData.append('title', title.trim())
+  }
+
+  formData.append(
+    'narration',
+    includeNarration ? 'true' : 'false'
+  )
+
+  setBusy(true)
+  setMessage('Uploading document…')
+  setVideoUrl('')
+  setJobId('')
+  setProgress(10)
+
+  try {
+    const response = await fetch(`${API_BASE}/convert/`, {
+      method: 'POST',
+      body: formData,
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(data?.detail || 'Conversion failed')
     }
 
-    const formData = new FormData()
-    formData.append('file', file)
-    if (title.trim()) formData.append('title', title.trim())
-    formData.append('narration', includeNarration ? 'true' : 'false')
+    const newJobId = data.job_id
 
-    setBusy(true)
-    setMessage('Generating video… this can take a few seconds.')
-    setVideoUrl('')
-    setJobId('')
-    setProgress(12)
-    const timer = setInterval(() => {
-      setProgress((p) => (p < 90 ? p + Math.random() * 8 : p))
-    }, 400)
+    setJobId(newJobId)
+    setMessage('Video generation started…')
+    setProgress(20)
 
-    try {
-      const response = await fetch(`${API_BASE}/convert/`, {
-        method: 'POST',
-        body: formData,
-      })
+    let completed = false
 
-      const data = await response.json()
-      if (!response.ok) {
-        throw new Error(data?.detail || 'Conversion failed')
+    while (!completed) {
+      await new Promise((resolve) => setTimeout(resolve, 2000))
+
+      const statusResponse = await fetch(
+        `${API_BASE}/jobs/${newJobId}/`
+      )
+
+      const statusData = await statusResponse.json()
+
+      if (!statusResponse.ok) {
+        throw new Error(
+          statusData?.detail || 'Failed to check job status'
+        )
       }
 
-      const safeName = (title.trim() || 'doc-video-converter').replace(/[\\/:*?"<>|]+/g, '_')
-      setDownloadName(safeName)
-      setVideoUrl(data.video_url)
-      setJobId(data.job_id)
-      setMessage('Done! Preview below.')
-      setProgress(100)
-    } catch (error) {
-      setMessage(error.message)
-      setProgress(0)
-    } finally {
-      setBusy(false)
-      clearInterval(timer)
+      if (statusData.status === 'completed') {
+        completed = true
+
+        const safeName = (
+          title.trim() || 'doc-video-converter'
+        ).replace(/[\\/:*?"<>|]+/g, '_')
+
+        setDownloadName(safeName)
+        setVideoUrl(statusData.video_url)
+        alert(statusData.video_url)
+        setMessage('Done! Preview below.')
+        setProgress(100)
+
+      } else if (statusData.status === 'failed') {
+        throw new Error(
+          statusData.error || 'Video generation failed'
+        )
+
+      } else {
+        setMessage('Generating video…')
+        setProgress((p) => Math.min(p + 5, 90))
+      }
     }
+
+  } catch (error) {
+    setMessage(error.message)
+    setProgress(0)
+  } finally {
+    setBusy(false)
   }
+}
 
   const handleDownload = async (url, name) => {
     try {

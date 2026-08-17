@@ -1,0 +1,309 @@
+[33mcommit 80928e8490b77dcff6ff0ffa808d3e269add0e94[m
+Author: J RIHANA HAZEEN JAMEELA <rihanahazeenjameela2004@gmail.com>
+Date:   Wed Mar 18 11:35:50 2026 +0530
+
+    Added document to video project
+
+ README.md                                          |   37 [32m+[m
+ backend/backend/__init__.py                        |    0
+ .../backend/__pycache__/__init__.cpython-314.pyc   |  Bin [31m0[m -> [32m154[m bytes
+ .../backend/__pycache__/settings.cpython-314.pyc   |  Bin [31m0[m -> [32m2959[m bytes
+ backend/backend/__pycache__/urls.cpython-314.pyc   |  Bin [31m0[m -> [32m1340[m bytes
+ backend/backend/__pycache__/wsgi.cpython-314.pyc   |  Bin [31m0[m -> [32m637[m bytes
+ backend/backend/asgi.py                            |   16 [32m+[m
+ backend/backend/settings.py                        |  142 [32m++[m
+ backend/backend/urls.py                            |   25 [32m+[m
+ backend/backend/wsgi.py                            |   16 [32m+[m
+ backend/converter/__init__.py                      |    0
+ .../converter/__pycache__/__init__.cpython-314.pyc |  Bin [31m0[m -> [32m156[m bytes
+ .../converter/__pycache__/admin.cpython-314.pyc    |  Bin [31m0[m -> [32m200[m bytes
+ backend/converter/__pycache__/apps.cpython-314.pyc |  Bin [31m0[m -> [32m523[m bytes
+ .../converter/__pycache__/models.cpython-314.pyc   |  Bin [31m0[m -> [32m197[m bytes
+ backend/converter/__pycache__/urls.cpython-314.pyc |  Bin [31m0[m -> [32m494[m bytes
+ .../converter/__pycache__/views.cpython-314.pyc    |  Bin [31m0[m -> [32m15007[m bytes
+ backend/converter/admin.py                         |    3 [32m+[m
+ backend/converter/apps.py                          |    6 [32m+[m
+ backend/converter/migrations/__init__.py           |    0
+ .../__pycache__/__init__.cpython-314.pyc           |  Bin [31m0[m -> [32m167[m bytes
+ backend/converter/models.py                        |    3 [32m+[m
+ backend/converter/tests.py                         |    3 [32m+[m
+ backend/converter/urls.py                          |    8 [32m+[m
+ backend/converter/views.py                         |  227 [32m++[m
+ backend/db.sqlite3                                 |  Bin [31m0[m -> [32m131072[m bytes
+ backend/manage.py                                  |   22 [32m+[m
+ .../02653455d8ce4e4abbf5962ec1a300c4/page_0.png    |  Bin [31m0[m -> [32m411541[m bytes
+ .../02653455d8ce4e4abbf5962ec1a300c4/page_1.png    |  Bin [31m0[m -> [32m393742[m bytes
+ .../02653455d8ce4e4abbf5962ec1a300c4/source.pdf    |  Bin [31m0[m -> [32m282769[m bytes
+ .../02653455d8ce4e4abbf5962ec1a300c4/video.mp4     |  Bin [31m0[m -> [32m558504[m bytes
+ .../0570696ab56b48c4903a560831b26e45/page_0.png    |  Bin [31m0[m -> [32m411541[m bytes
+ .../0570696ab56b48c4903a560831b26e45/page_1.png    |  Bin [31m0[m -> [32m393742[m bytes
+ .../0570696ab56b48c4903a560831b26e45/source.pdf    |  Bin [31m0[m -> [32m282769[m bytes
+ .../0570696ab56b48c4903a560831b26e45/video.mp4     |  Bin [31m0[m -> [32m558504[m bytes
+ .../0f961489d99f4f42bb0df1804ec60028/narration.wav |  Bin [31m0[m -> [32m9635994[m bytes
+ .../0f961489d99f4f42bb0df1804ec60028/page_0.png    |  Bin [31m0[m -> [32m466484[m bytes
+ .../0f961489d99f4f42bb0df1804ec60028/source.txt    |  118 [32m+[m
+ .../0f961489d99f4f42bb0df1804ec60028/video.mp4     |  Bin [31m0[m -> [32m6896677[m bytes
+ .../102549da1d2d4429be1be5c7a133b062/page_0.png    |  Bin [31m0[m -> [32m411541[m bytes
+ .../102549da1d2d4429be1be5c7a133b062/page_1.png    |  Bin [31m0[m -> [32m393742[m bytes
+ .../102549da1d2d4429be1be5c7a133b062/source.pdf    |  Bin [31m0[m -> [32m282769[m bytes
+ .../102549da1d2d4429be1be5c7a133b062/video.mp4     |  Bin [31m0[m -> [32m558504[m bytes
+ .../1be7d1e166834cf09930b05e4ae54905/page_0.png    |  Bin [31m0[m -> [32m411541[m bytes
+ .../1be7d1e166834cf09930b05e4ae54905/page_1.png    |  Bin [31m0[m -> [32m393742[m bytes
+ .../1be7d1e166834cf09930b05e4ae54905/source.pdf    |  Bin [31m0[m -> [32m282769[m bytes
+ .../1be7d1e166834cf09930b05e4ae54905/video.mp4     |  Bin [31m0[m -> [32m558504[m bytes
+ .../219d9d2cf606484f9ea5c1ca62c44a25/page_0.png    |  Bin [31m0[m -> [32m411541[m bytes
+ .../219d9d2cf606484f9ea5c1ca62c44a25/page_1.png    |  Bin [31m0[m -> [32m393742[m bytes
+ .../219d9d2cf606484f9ea5c1ca62c44a25/source.pdf    |  Bin [31m0[m -> [32m282769[m bytes
+ .../219d9d2cf606484f9ea5c1ca62c44a25/video.mp4     |  Bin [31m0[m -> [32m558504[m bytes
+ .../2e35dfa3d83840d7a14bb92173f60100/page_0.png    |  Bin [31m0[m -> [32m411541[m bytes
+ .../2e35dfa3d83840d7a14bb92173f60100/page_1.png    |  Bin [31m0[m -> [32m393742[m bytes
+ .../2e35dfa3d83840d7a14bb92173f60100/source.pdf    |  Bin [31m0[m -> [32m282769[m bytes
+ .../2e35dfa3d83840d7a14bb92173f60100/video.mp4     |  Bin [31m0[m -> [32m558504[m bytes
+ .../2f731f52217e40f6bf2f78304662ec80/narration.wav |  Bin [31m0[m -> [32m16097938[m bytes
+ .../2f731f52217e40f6bf2f78304662ec80/page_0.png    |  Bin [31m0[m -> [32m411541[m bytes
+ .../2f731f52217e40f6bf2f78304662ec80/page_1.png    |  Bin [31m0[m -> [32m393742[m bytes
+ .../2f731f52217e40f6bf2f78304662ec80/source.pdf    |  Bin [31m0[m -> [32m282769[m bytes
+ .../2f731f52217e40f6bf2f78304662ec80/video.mp4     |  Bin [31m0[m -> [32m9805002[m bytes
+ .../30a53cc0b0374ac49f637e82bf5143d5/page_0.png    |  Bin [31m0[m -> [32m466484[m bytes
+ .../30a53cc0b0374ac49f637e82bf5143d5/source.txt    |  118 [32m+[m
+ .../30a53cc0b0374ac49f637e82bf5143d5/video.mp4     |  Bin [31m0[m -> [32m1242921[m bytes
+ .../334a2f426d8045e1b563fd1b0610b8aa/narration.wav |  Bin [31m0[m -> [32m16097938[m bytes
+ .../334a2f426d8045e1b563fd1b0610b8aa/page_0.png    |  Bin [31m0[m -> [32m411541[m bytes
+ .../334a2f426d8045e1b563fd1b0610b8aa/page_1.png    |  Bin [31m0[m -> [32m393742[m bytes
+ .../334a2f426d8045e1b563fd1b0610b8aa/source.pdf    |  Bin [31m0[m -> [32m282769[m bytes
+ .../334a2f426d8045e1b563fd1b0610b8aa/video.mp4     |  Bin [31m0[m -> [32m9472964[m bytes
+ .../3543b8726843404da5aa2b7f7e769dd7/narration.wav |  Bin [31m0[m -> [32m9635994[m bytes
+ .../3543b8726843404da5aa2b7f7e769dd7/page_0.png    |  Bin [31m0[m -> [32m466484[m bytes
+ .../3543b8726843404da5aa2b7f7e769dd7/source.txt    |  118 [32m+[m
+ .../3543b8726843404da5aa2b7f7e769dd7/video.mp4     |  Bin [31m0[m -> [32m4593371[m bytes
+ .../3d8e98c5a0b4495a8a97bdce4be2a6a3/narration.wav |  Bin [31m0[m -> [32m16097938[m bytes
+ .../3d8e98c5a0b4495a8a97bdce4be2a6a3/slide_0.png   |  Bin [31m0[m -> [32m76118[m bytes
+ .../3d8e98c5a0b4495a8a97bdce4be2a6a3/slide_1.png   |  Bin [31m0[m -> [32m65941[m bytes
+ .../3d8e98c5a0b4495a8a97bdce4be2a6a3/slide_10.png  |  Bin [31m0[m -> [32m73987[m bytes
+ .../3d8e98c5a0b4495a8a97bdce4be2a6a3/slide_11.png  |  Bin [31m0[m -> [32m81994[m bytes
+ .../3d8e98c5a0b4495a8a97bdce4be2a6a3/slide_12.png  |  Bin [31m0[m -> [32m48214[m bytes
+ .../3d8e98c5a0b4495a8a97bdce4be2a6a3/slide_2.png   |  Bin [31m0[m -> [32m77961[m bytes
+ .../3d8e98c5a0b4495a8a97bdce4be2a6a3/slide_3.png   |  Bin [31m0[m -> [32m74639[m bytes
+ .../3d8e98c5a0b4495a8a97bdce4be2a6a3/slide_4.png   |  Bin [31m0[m -> [32m76299[m bytes
+ .../3d8e98c5a0b4495a8a97bdce4be2a6a3/slide_5.png   |  Bin [31m0[m -> [32m75465[m bytes
+ .../3d8e98c5a0b4495a8a97bdce4be2a6a3/slide_6.png   |  Bin [31m0[m -> [32m74361[m bytes
+ .../3d8e98c5a0b4495a8a97bdce4be2a6a3/slide_7.png   |  Bin [31m0[m -> [32m62962[m bytes
+ .../3d8e98c5a0b4495a8a97bdce4be2a6a3/slide_8.png   |  Bin [31m0[m -> [32m63985[m bytes
+ .../3d8e98c5a0b4495a8a97bdce4be2a6a3/slide_9.png   |  Bin [31m0[m -> [32m70751[m bytes
+ .../3d8e98c5a0b4495a8a97bdce4be2a6a3/source.pdf    |  Bin [31m0[m -> [32m282769[m bytes
+ .../temp-audio.m4a                                 |  Bin [31m0[m -> [32m5000320[m bytes
+ .../3d8e98c5a0b4495a8a97bdce4be2a6a3/video.mp4     |  Bin [31m0[m -> [32m5684253[m bytes
+ .../5247a9d313094be1a10fc5200fd6b3cf/narration.wav |  Bin [31m0[m -> [32m9635994[m bytes
+ .../5247a9d313094be1a10fc5200fd6b3cf/page_0.png    |  Bin [31m0[m -> [32m466484[m bytes
+ .../5247a9d313094be1a10fc5200fd6b3cf/source.txt    |  118 [32m+[m
+ .../5247a9d313094be1a10fc5200fd6b3cf/video.mp4     |  Bin [31m0[m -> [32m4593371[m bytes
+ .../594787272d114dd88174596847f5b891/audio_0.wav   |  Bin [31m0[m -> [32m8549198[m bytes
+ .../594787272d114dd88174596847f5b891/page_0.png    |  Bin [31m0[m -> [32m411541[m bytes
+ .../594787272d114dd88174596847f5b891/page_1.png    |  Bin [31m0[m -> [32m393742[m bytes
+ .../594787272d114dd88174596847f5b891/source.pdf    |  Bin [31m0[m -> [32m282769[m bytes
+ .../59d4fdeb4b9943efbf2945e77b9e9094/page_0.png    |  Bin [31m0[m -> [32m411541[m bytes
+ .../59d4fdeb4b9943efbf2945e77b9e9094/page_1.png    |  Bin [31m0[m -> [32m393742[m bytes
+ .../59d4fdeb4b9943efbf2945e77b9e9094/source.pdf    |  Bin [31m0[m -> [32m282769[m bytes
+ .../59d4fdeb4b9943efbf2945e77b9e9094/video.mp4     |  Bin [31m0[m -> [32m558504[m bytes
+ .../5ab93f01dc424999b5305efa91a99bd2/narration.wav |  Bin [31m0[m -> [32m9635994[m bytes
+ .../5ab93f01dc424999b5305efa91a99bd2/page_0.png    |  Bin [31m0[m -> [32m466484[m bytes
+ .../5ab93f01dc424999b5305efa91a99bd2/source.txt    |  118 [32m+[m
+ .../5ab93f01dc424999b5305efa91a99bd2/video.mp4     |  Bin [31m0[m -> [32m4593371[m bytes
+ .../5b273a6d17d748a9a2fd508cc7c3b477/page_0.png    |  Bin [31m0[m -> [32m411541[m bytes
+ .../5b273a6d17d748a9a2fd508cc7c3b477/page_1.png    |  Bin [31m0[m -> [32m393742[m bytes
+ .../5b273a6d17d748a9a2fd508cc7c3b477/source.pdf    |  Bin [31m0[m -> [32m282769[m bytes
+ .../5b273a6d17d748a9a2fd508cc7c3b477/video.mp4     |  Bin [31m0[m -> [32m558504[m bytes
+ .../5d5e59ec23324df8865dca66af72b2e6/page_0.png    |  Bin [31m0[m -> [32m466484[m bytes
+ .../5d5e59ec23324df8865dca66af72b2e6/source.txt    |  118 [32m+[m
+ .../5d5e59ec23324df8865dca66af72b2e6/video.mp4     |  Bin [31m0[m -> [32m1242921[m bytes
+ .../5f64cbe5ca584911b4be147a8fac8476/page_0.png    |  Bin [31m0[m -> [32m466484[m bytes
+ .../5f64cbe5ca584911b4be147a8fac8476/source.txt    |  118 [32m+[m
+ .../5f64cbe5ca584911b4be147a8fac8476/video.mp4     |  Bin [31m0[m -> [32m1242921[m bytes
+ .../772e0633d01d4ee48e78c1d6abc731ef/slide_0.png   |  Bin [31m0[m -> [32m76118[m bytes
+ .../772e0633d01d4ee48e78c1d6abc731ef/slide_1.png   |  Bin [31m0[m -> [32m65941[m bytes
+ .../772e0633d01d4ee48e78c1d6abc731ef/slide_10.png  |  Bin [31m0[m -> [32m73987[m bytes
+ .../772e0633d01d4ee48e78c1d6abc731ef/slide_11.png  |  Bin [31m0[m -> [32m81994[m bytes
+ .../772e0633d01d4ee48e78c1d6abc731ef/slide_12.png  |  Bin [31m0[m -> [32m48214[m bytes
+ .../772e0633d01d4ee48e78c1d6abc731ef/slide_2.png   |  Bin [31m0[m -> [32m77961[m bytes
+ .../772e0633d01d4ee48e78c1d6abc731ef/slide_3.png   |  Bin [31m0[m -> [32m74639[m bytes
+ .../772e0633d01d4ee48e78c1d6abc731ef/slide_4.png   |  Bin [31m0[m -> [32m76299[m bytes
+ .../772e0633d01d4ee48e78c1d6abc731ef/slide_5.png   |  Bin [31m0[m -> [32m75465[m bytes
+ .../772e0633d01d4ee48e78c1d6abc731ef/slide_6.png   |  Bin [31m0[m -> [32m74361[m bytes
+ .../772e0633d01d4ee48e78c1d6abc731ef/slide_7.png   |  Bin [31m0[m -> [32m62962[m bytes
+ .../772e0633d01d4ee48e78c1d6abc731ef/slide_8.png   |  Bin [31m0[m -> [32m63985[m bytes
+ .../772e0633d01d4ee48e78c1d6abc731ef/slide_9.png   |  Bin [31m0[m -> [32m70751[m bytes
+ .../772e0633d01d4ee48e78c1d6abc731ef/source.pdf    |  Bin [31m0[m -> [32m282769[m bytes
+ .../772e0633d01d4ee48e78c1d6abc731ef/video.mp4     |  Bin [31m0[m -> [32m796475[m bytes
+ .../7c9f9b212a614a819e2fea2e76bac4df/narration.wav |  Bin [31m0[m -> [32m9635994[m bytes
+ .../7c9f9b212a614a819e2fea2e76bac4df/page_0.png    |  Bin [31m0[m -> [32m41105[m bytes
+ .../7c9f9b212a614a819e2fea2e76bac4df/page_1.png    |  Bin [31m0[m -> [32m42940[m bytes
+ .../7c9f9b212a614a819e2fea2e76bac4df/page_2.png    |  Bin [31m0[m -> [32m42837[m bytes
+ .../7c9f9b212a614a819e2fea2e76bac4df/page_3.png    |  Bin [31m0[m -> [32m44133[m bytes
+ .../7c9f9b212a614a819e2fea2e76bac4df/page_4.png    |  Bin [31m0[m -> [32m42040[m bytes
+ .../7c9f9b212a614a819e2fea2e76bac4df/page_5.png    |  Bin [31m0[m -> [32m41261[m bytes
+ .../7c9f9b212a614a819e2fea2e76bac4df/page_6.png    |  Bin [31m0[m -> [32m42237[m bytes
+ .../7c9f9b212a614a819e2fea2e76bac4df/page_7.png    |  Bin [31m0[m -> [32m29632[m bytes
+ .../7c9f9b212a614a819e2fea2e76bac4df/source.txt    |  118 [32m+[m
+ .../7c9f9b212a614a819e2fea2e76bac4df/video.mp4     |  Bin [31m0[m -> [32m4013251[m bytes
+ .../88ba8c83ccc94d8d84cc9ca199a48976/narration.wav |  Bin [31m0[m -> [32m9635994[m bytes
+ .../88ba8c83ccc94d8d84cc9ca199a48976/page_0.png    |  Bin [31m0[m -> [32m466484[m bytes
+ .../88ba8c83ccc94d8d84cc9ca199a48976/source.txt    |  118 [32m+[m
+ .../88ba8c83ccc94d8d84cc9ca199a48976/video.mp4     |  Bin [31m0[m -> [32m4593371[m bytes
+ .../8d05bcdda8064ab89f9a85d7fcf1100d/narration.wav |  Bin [31m0[m -> [32m16097938[m bytes
+ .../8d05bcdda8064ab89f9a85d7fcf1100d/page_0.png    |  Bin [31m0[m -> [32m411541[m bytes
+ .../8d05bcdda8064ab89f9a85d7fcf1100d/page_1.png    |  Bin [31m0[m -> [32m393742[m bytes
+ .../8d05bcdda8064ab89f9a85d7fcf1100d/source.pdf    |  Bin [31m0[m -> [32m282769[m bytes
+ .../8d05bcdda8064ab89f9a85d7fcf1100d/video.mp4     |  Bin [31m0[m -> [32m9805002[m bytes
+ .../8d802ee1ccae4e9fa49cb643d8bbb8fd/page_0.png    |  Bin [31m0[m -> [32m466484[m bytes
+ .../8d802ee1ccae4e9fa49cb643d8bbb8fd/source.txt    |  118 [32m+[m
+ .../8d802ee1ccae4e9fa49cb643d8bbb8fd/video.mp4     |  Bin [31m0[m -> [32m37076[m bytes
+ .../8f103b96a1644d0182aa419cbecfac14/slide_0.png   |  Bin [31m0[m -> [32m9219[m bytes
+ .../8f103b96a1644d0182aa419cbecfac14/slide_1.png   |  Bin [31m0[m -> [32m76118[m bytes
+ .../8f103b96a1644d0182aa419cbecfac14/slide_10.png  |  Bin [31m0[m -> [32m70751[m bytes
+ .../8f103b96a1644d0182aa419cbecfac14/slide_11.png  |  Bin [31m0[m -> [32m73987[m bytes
+ .../8f103b96a1644d0182aa419cbecfac14/slide_12.png  |  Bin [31m0[m -> [32m81994[m bytes
+ .../8f103b96a1644d0182aa419cbecfac14/slide_13.png  |  Bin [31m0[m -> [32m48214[m bytes
+ .../8f103b96a1644d0182aa419cbecfac14/slide_2.png   |  Bin [31m0[m -> [32m65941[m bytes
+ .../8f103b96a1644d0182aa419cbecfac14/slide_3.png   |  Bin [31m0[m -> [32m77961[m bytes
+ .../8f103b96a1644d0182aa419cbecfac14/slide_4.png   |  Bin [31m0[m -> [32m74639[m bytes
+ .../8f103b96a1644d0182aa419cbecfac14/slide_5.png   |  Bin [31m0[m -> [32m76299[m bytes
+ .../8f103b96a1644d0182aa419cbecfac14/slide_6.png   |  Bin [31m0[m -> [32m75465[m bytes
+ .../8f103b96a1644d0182aa419cbecfac14/slide_7.png   |  Bin [31m0[m -> [32m74361[m bytes
+ .../8f103b96a1644d0182aa419cbecfac14/slide_8.png   |  Bin [31m0[m -> [32m62962[m bytes
+ .../8f103b96a1644d0182aa419cbecfac14/slide_9.png   |  Bin [31m0[m -> [32m63985[m bytes
+ .../8f103b96a1644d0182aa419cbecfac14/source.pdf    |  Bin [31m0[m -> [32m282769[m bytes
+ .../8f103b96a1644d0182aa419cbecfac14/video.mp4     |  Bin [31m0[m -> [32m809339[m bytes
+ .../8f29806979b64865b490cc568f7bac29/narration.wav |  Bin [31m0[m -> [32m9635994[m bytes
+ .../8f29806979b64865b490cc568f7bac29/page_0.png    |  Bin [31m0[m -> [32m466484[m bytes
+ .../8f29806979b64865b490cc568f7bac29/source.txt    |  118 [32m+[m
+ .../8f29806979b64865b490cc568f7bac29/video.mp4     |  Bin [31m0[m -> [32m4593371[m bytes
+ .../9a0df6fac9de47b18bfdca0334901b6d/page_0.png    |  Bin [31m0[m -> [32m466484[m bytes
+ .../9a0df6fac9de47b18bfdca0334901b6d/source.txt    |  118 [32m+[m
+ .../9a0df6fac9de47b18bfdca0334901b6d/video.mp4     |  Bin [31m0[m -> [32m1242921[m bytes
+ .../ab50f5dbd5a44d999dd68b2a6ad61cb9/narration.wav |  Bin [31m0[m -> [32m16097938[m bytes
+ .../ab50f5dbd5a44d999dd68b2a6ad61cb9/slide_0.png   |  Bin [31m0[m -> [32m76118[m bytes
+ .../ab50f5dbd5a44d999dd68b2a6ad61cb9/slide_1.png   |  Bin [31m0[m -> [32m65941[m bytes
+ .../ab50f5dbd5a44d999dd68b2a6ad61cb9/slide_10.png  |  Bin [31m0[m -> [32m73987[m bytes
+ .../ab50f5dbd5a44d999dd68b2a6ad61cb9/slide_11.png  |  Bin [31m0[m -> [32m81994[m bytes
+ .../ab50f5dbd5a44d999dd68b2a6ad61cb9/slide_12.png  |  Bin [31m0[m -> [32m48214[m bytes
+ .../ab50f5dbd5a44d999dd68b2a6ad61cb9/slide_2.png   |  Bin [31m0[m -> [32m77961[m bytes
+ .../ab50f5dbd5a44d999dd68b2a6ad61cb9/slide_3.png   |  Bin [31m0[m -> [32m74639[m bytes
+ .../ab50f5dbd5a44d999dd68b2a6ad61cb9/slide_4.png   |  Bin [31m0[m -> [32m76299[m bytes
+ .../ab50f5dbd5a44d999dd68b2a6ad61cb9/slide_5.png   |  Bin [31m0[m -> [32m75465[m bytes
+ .../ab50f5dbd5a44d999dd68b2a6ad61cb9/slide_6.png   |  Bin [31m0[m -> [32m74361[m bytes
+ .../ab50f5dbd5a44d999dd68b2a6ad61cb9/slide_7.png   |  Bin [31m0[m -> [32m62962[m bytes
+ .../ab50f5dbd5a44d999dd68b2a6ad61cb9/slide_8.png   |  Bin [31m0[m -> [32m63985[m bytes
+ .../ab50f5dbd5a44d999dd68b2a6ad61cb9/slide_9.png   |  Bin [31m0[m -> [32m70751[m bytes
+ .../ab50f5dbd5a44d999dd68b2a6ad61cb9/source.pdf    |  Bin [31m0[m -> [32m282769[m bytes
+ .../ab50f5dbd5a44d999dd68b2a6ad61cb9/video.mp4     |  Bin [31m0[m -> [32m7898373[m bytes
+ .../af57e5a9951e47f3b6d62aa284603467/narration.wav |  Bin [31m0[m -> [32m9635994[m bytes
+ .../af57e5a9951e47f3b6d62aa284603467/page_0.png    |  Bin [31m0[m -> [32m466484[m bytes
+ .../af57e5a9951e47f3b6d62aa284603467/source.txt    |  118 [32m+[m
+ .../af57e5a9951e47f3b6d62aa284603467/video.mp4     |  Bin [31m0[m -> [32m4593371[m bytes
+ .../b8be817078444528bf5a1a3c5432eb9d/page_0.png    |  Bin [31m0[m -> [32m411541[m bytes
+ .../b8be817078444528bf5a1a3c5432eb9d/page_1.png    |  Bin [31m0[m -> [32m393742[m bytes
+ .../b8be817078444528bf5a1a3c5432eb9d/source.pdf    |  Bin [31m0[m -> [32m282769[m bytes
+ .../b8be817078444528bf5a1a3c5432eb9d/video.mp4     |  Bin [31m0[m -> [32m558504[m bytes
+ .../c0c27620484c417797affa34a816a852/page_0.png    |  Bin [31m0[m -> [32m466484[m bytes
+ .../c0c27620484c417797affa34a816a852/source.txt    |  118 [32m+[m
+ .../c0c27620484c417797affa34a816a852/video.mp4     |  Bin [31m0[m -> [32m1242921[m bytes
+ .../c3bc41edca2f41b0b2b570cb1edd9f93/page_0.png    |  Bin [31m0[m -> [32m411541[m bytes
+ .../c3bc41edca2f41b0b2b570cb1edd9f93/page_1.png    |  Bin [31m0[m -> [32m393742[m bytes
+ .../c3bc41edca2f41b0b2b570cb1edd9f93/source.pdf    |  Bin [31m0[m -> [32m282769[m bytes
+ .../c3bc41edca2f41b0b2b570cb1edd9f93/video.mp4     |  Bin [31m0[m -> [32m558504[m bytes
+ .../c4a37fb9603547bc9b674ef116674907/narration.wav |  Bin [31m0[m -> [32m16097938[m bytes
+ .../c4a37fb9603547bc9b674ef116674907/page_0.png    |  Bin [31m0[m -> [32m411541[m bytes
+ .../c4a37fb9603547bc9b674ef116674907/page_1.png    |  Bin [31m0[m -> [32m393742[m bytes
+ .../c4a37fb9603547bc9b674ef116674907/source.pdf    |  Bin [31m0[m -> [32m282769[m bytes
+ .../c4a37fb9603547bc9b674ef116674907/video.mp4     |  Bin [31m0[m -> [32m9805002[m bytes
+ .../cfaff95da08547009e1ecfd21c6f9ba4/narration.wav |  Bin [31m0[m -> [32m16097938[m bytes
+ .../cfaff95da08547009e1ecfd21c6f9ba4/page_0.png    |  Bin [31m0[m -> [32m411541[m bytes
+ .../cfaff95da08547009e1ecfd21c6f9ba4/page_1.png    |  Bin [31m0[m -> [32m393742[m bytes
+ .../cfaff95da08547009e1ecfd21c6f9ba4/source.pdf    |  Bin [31m0[m -> [32m282769[m bytes
+ .../cfaff95da08547009e1ecfd21c6f9ba4/video.mp4     |  Bin [31m0[m -> [32m9805002[m bytes
+ .../d05870e25dd04fb0b25b41f604213508/narration.wav |  Bin [31m0[m -> [32m16097938[m bytes
+ .../d05870e25dd04fb0b25b41f604213508/page_0.png    |  Bin [31m0[m -> [32m411541[m bytes
+ .../d05870e25dd04fb0b25b41f604213508/page_1.png    |  Bin [31m0[m -> [32m393742[m bytes
+ .../d05870e25dd04fb0b25b41f604213508/source.pdf    |  Bin [31m0[m -> [32m282769[m bytes
+ .../d05870e25dd04fb0b25b41f604213508/video.mp4     |  Bin [31m0[m -> [32m5990844[m bytes
+ .../d163f39545d84791a49d0c5864a3db1b/page_0.png    |  Bin [31m0[m -> [32m411541[m bytes
+ .../d163f39545d84791a49d0c5864a3db1b/page_1.png    |  Bin [31m0[m -> [32m393742[m bytes
+ .../d163f39545d84791a49d0c5864a3db1b/source.pdf    |  Bin [31m0[m -> [32m282769[m bytes
+ .../d1bff1ac8165439f8a724534466273a8/audio_0.wav   |  Bin [31m0[m -> [32m8549198[m bytes
+ .../d1bff1ac8165439f8a724534466273a8/audio_1.wav   |  Bin [31m0[m -> [32m7548762[m bytes
+ .../d1bff1ac8165439f8a724534466273a8/page_0.png    |  Bin [31m0[m -> [32m411541[m bytes
+ .../d1bff1ac8165439f8a724534466273a8/page_1.png    |  Bin [31m0[m -> [32m393742[m bytes
+ .../d1bff1ac8165439f8a724534466273a8/source.pdf    |  Bin [31m0[m -> [32m282769[m bytes
+ .../d685ed4fb952424880709dd292d52c8d/narration.wav |  Bin [31m0[m -> [32m16097938[m bytes
+ .../d685ed4fb952424880709dd292d52c8d/page_0.png    |  Bin [31m0[m -> [32m411541[m bytes
+ .../d685ed4fb952424880709dd292d52c8d/page_1.png    |  Bin [31m0[m -> [32m393742[m bytes
+ .../d685ed4fb952424880709dd292d52c8d/source.pdf    |  Bin [31m0[m -> [32m282769[m bytes
+ .../d685ed4fb952424880709dd292d52c8d/video.mp4     |  Bin [31m0[m -> [32m9805002[m bytes
+ .../d763c740fe144a1ebd8d8bdc4ca13ea4/page_0.png    |  Bin [31m0[m -> [32m411541[m bytes
+ .../d763c740fe144a1ebd8d8bdc4ca13ea4/page_1.png    |  Bin [31m0[m -> [32m393742[m bytes
+ .../d763c740fe144a1ebd8d8bdc4ca13ea4/source.pdf    |  Bin [31m0[m -> [32m282769[m bytes
+ .../d763c740fe144a1ebd8d8bdc4ca13ea4/video.mp4     |  Bin [31m0[m -> [32m558504[m bytes
+ .../d797e90745794434946fdfafd1a4bcf0/narration.wav |  Bin [31m0[m -> [32m9635994[m bytes
+ .../d797e90745794434946fdfafd1a4bcf0/page_0.png    |  Bin [31m0[m -> [32m466484[m bytes
+ .../d797e90745794434946fdfafd1a4bcf0/source.txt    |  118 [32m+[m
+ .../d797e90745794434946fdfafd1a4bcf0/video.mp4     |  Bin [31m0[m -> [32m4593371[m bytes
+ .../e141aab200ee4554aa601b354df9ca88/page_0.png    |  Bin [31m0[m -> [32m41105[m bytes
+ .../e141aab200ee4554aa601b354df9ca88/page_1.png    |  Bin [31m0[m -> [32m42940[m bytes
+ .../e141aab200ee4554aa601b354df9ca88/page_2.png    |  Bin [31m0[m -> [32m42837[m bytes
+ .../e141aab200ee4554aa601b354df9ca88/page_3.png    |  Bin [31m0[m -> [32m44133[m bytes
+ .../e141aab200ee4554aa601b354df9ca88/page_4.png    |  Bin [31m0[m -> [32m42040[m bytes
+ .../e141aab200ee4554aa601b354df9ca88/page_5.png    |  Bin [31m0[m -> [32m41261[m bytes
+ .../e141aab200ee4554aa601b354df9ca88/page_6.png    |  Bin [31m0[m -> [32m42237[m bytes
+ .../e141aab200ee4554aa601b354df9ca88/page_7.png    |  Bin [31m0[m -> [32m29632[m bytes
+ .../e141aab200ee4554aa601b354df9ca88/source.txt    |  118 [32m+[m
+ .../e141aab200ee4554aa601b354df9ca88/video.mp4     |  Bin [31m0[m -> [32m326960[m bytes
+ .../e21791a505984b52a2dbabb4fe0ac0b6/narration.wav |  Bin [31m0[m -> [32m9635994[m bytes
+ .../e21791a505984b52a2dbabb4fe0ac0b6/page_0.png    |  Bin [31m0[m -> [32m466484[m bytes
+ .../e21791a505984b52a2dbabb4fe0ac0b6/source.txt    |  118 [32m+[m
+ .../e21791a505984b52a2dbabb4fe0ac0b6/video.mp4     |  Bin [31m0[m -> [32m4593371[m bytes
+ .../f8325863947d43c7b60f00845500e4f6/narration.wav |  Bin [31m0[m -> [32m9635994[m bytes
+ .../f8325863947d43c7b60f00845500e4f6/page_0.png    |  Bin [31m0[m -> [32m466484[m bytes
+ .../f8325863947d43c7b60f00845500e4f6/source.txt    |  118 [32m+[m
+ .../f8325863947d43c7b60f00845500e4f6/video.mp4     |  Bin [31m0[m -> [32m4593371[m bytes
+ .../faf9a03d889749958b3ac9df2105a114/narration.wav |  Bin [31m0[m -> [32m16097938[m bytes
+ .../faf9a03d889749958b3ac9df2105a114/slide_0.png   |  Bin [31m0[m -> [32m76118[m bytes
+ .../faf9a03d889749958b3ac9df2105a114/slide_1.png   |  Bin [31m0[m -> [32m65941[m bytes
+ .../faf9a03d889749958b3ac9df2105a114/slide_10.png  |  Bin [31m0[m -> [32m73987[m bytes
+ .../faf9a03d889749958b3ac9df2105a114/slide_11.png  |  Bin [31m0[m -> [32m81994[m bytes
+ .../faf9a03d889749958b3ac9df2105a114/slide_12.png  |  Bin [31m0[m -> [32m48214[m bytes
+ .../faf9a03d889749958b3ac9df2105a114/slide_2.png   |  Bin [31m0[m -> [32m77961[m bytes
+ .../faf9a03d889749958b3ac9df2105a114/slide_3.png   |  Bin [31m0[m -> [32m74639[m bytes
+ .../faf9a03d889749958b3ac9df2105a114/slide_4.png   |  Bin [31m0[m -> [32m76299[m bytes
+ .../faf9a03d889749958b3ac9df2105a114/slide_5.png   |  Bin [31m0[m -> [32m75465[m bytes
+ .../faf9a03d889749958b3ac9df2105a114/slide_6.png   |  Bin [31m0[m -> [32m74361[m bytes
+ .../faf9a03d889749958b3ac9df2105a114/slide_7.png   |  Bin [31m0[m -> [32m62962[m bytes
+ .../faf9a03d889749958b3ac9df2105a114/slide_8.png   |  Bin [31m0[m -> [32m63985[m bytes
+ .../faf9a03d889749958b3ac9df2105a114/slide_9.png   |  Bin [31m0[m -> [32m70751[m bytes
+ .../faf9a03d889749958b3ac9df2105a114/source.pdf    |  Bin [31m0[m -> [32m282769[m bytes
+ .../temp-audio.m4a                                 |  Bin [31m0[m -> [32m5000320[m bytes
+ .../faf9a03d889749958b3ac9df2105a114/video.mp4     |  Bin [31m0[m -> [32m7722152[m bytes
+ backend/runserver.err                              | 1128 [32m+++++++++[m
+ backend/runserver.log                              |  364 [32m+++[m
+ devserver.err                                      |    0
+ devserver.log                                      |   10 [32m+[m
+ frontend/.gitignore                                |   24 [32m+[m
+ frontend/README.md                                 |   16 [32m+[m
+ frontend/devserver.err                             |    0
+ frontend/eslint.config.js                          |   29 [32m+[m
+ frontend/index.html                                |   13 [32m+[m
+ frontend/package-lock.json                         | 2610 [32m++++++++++++++++++++[m
+ frontend/package.json                              |   27 [32m+[m
+ frontend/public/favicon.svg                        |    1 [32m+[m
+ frontend/public/icons.svg                          |   24 [32m+[m
+ frontend/src/App.css                               |  275 [32m+++[m
+ frontend/src/App.jsx                               |  164 [32m++[m
+ frontend/src/assets/hero.png                       |  Bin [31m0[m -> [32m44919[m bytes
+ frontend/src/assets/react.svg                      |    1 [32m+[m
+ frontend/src/assets/vite.svg                       |    1 [32m+[m
+ frontend/src/index.css                             |   46 [32m+[m
+ frontend/src/main.jsx                              |   10 [32m+[m
+ frontend/vite.config.js                            |    7 [32m+[m
+ requirements.txt                                   |    8 [32m+[m
+ runserver.err                                      |    0
+ runserver.log                                      |    0
+ 302 files changed, 7390 insertions(+)
