@@ -8,11 +8,13 @@ function App() {
   const [title, setTitle] = useState('')
   const [videoUrl, setVideoUrl] = useState('')
   const [jobId, setJobId] = useState('')
+  const [processingJobId, setProcessingJobId] = useState('')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [progress, setProgress] = useState(0)
   const [downloadName, setDownloadName] = useState('doc-video-converter')
   const [includeNarration, setIncludeNarration] = useState(true)
+  const [completed, setCompleted] = useState(false)
 
   const fileHint = useMemo(() => {
     if (!file) return 'PDF, DOCX, or TXT — max 20 MB'
@@ -20,51 +22,96 @@ function App() {
   }, [file])
 
   const handleSubmit = async (event) => {
-    event.preventDefault()
-    if (!file) {
-      setMessage('Please choose a document first.')
-      return
+  event.preventDefault()
+
+  if (!file) {
+    setMessage('Please choose a document first.')
+    return
+  }
+
+  const formData = new FormData()
+  formData.append('file', file)
+
+  if (title.trim()) {
+    formData.append('title', title.trim())
+  }
+
+  formData.append(
+    'narration',
+    includeNarration ? 'true' : 'false'
+  )
+
+  setBusy(true)
+  setMessage('Uploading document…')
+  setVideoUrl('')
+  setCompleted(false)
+  setJobId('')
+  setProcessingJobId('')
+  setProgress(5)
+
+  try {
+    // 1. Start conversion
+    const response = await fetch(`${API_BASE}/convert/`, {
+      method: 'POST',
+      body: formData,
+    })
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(data?.detail || 'Conversion failed')
     }
 
-    const formData = new FormData()
-    formData.append('file', file)
-    if (title.trim()) formData.append('title', title.trim())
-    formData.append('narration', includeNarration ? 'true' : 'false')
+    const currentJobId = data.job_id
+    setJobId(currentJobId)
+    setProcessingJobId(currentJobId)
+    console.log("NEW JOB ID:", currentJobId)
 
-    setBusy(true)
-    setMessage('Generating video… this can take a few seconds.')
-    setVideoUrl('')
-    setJobId('')
-    setProgress(12)
-    const timer = setInterval(() => {
-      setProgress((p) => (p < 90 ? p + Math.random() * 8 : p))
-    }, 400)
+    const safeName = (
+      title.trim() || 'doc-video-converter'
+    ).replace(/[\\/:*?"<>|]+/g, '_')
 
-    try {
-      const response = await fetch(`${API_BASE}/convert/`, {
-        method: 'POST',
-        body: formData,
-      })
+    setDownloadName(safeName)
+    setMessage('Video is being generated…')
+    setProgress(15)
 
-      const data = await response.json()
-      if (!response.ok) {
-        throw new Error(data?.detail || 'Conversion failed')
+    // 2. Check job status
+    while (true) {
+      await new Promise((resolve) => setTimeout(resolve, 2000))
+
+      const statusResponse = await fetch(
+        `${API_BASE}/jobs/${currentJobId}/`
+      )
+
+      const statusData = await statusResponse.json()
+
+      if (!statusResponse.ok) {
+        throw new Error(
+          statusData?.detail || 'Failed to check job status'
+        )
       }
 
-      const safeName = (title.trim() || 'doc-video-converter').replace(/[\\/:*?"<>|]+/g, '_')
-      setDownloadName(safeName)
-      setVideoUrl(data.video_url)
-      setJobId(data.job_id)
-      setMessage('Done! Preview below.')
-      setProgress(100)
-    } catch (error) {
-      setMessage(error.message)
-      setProgress(0)
-    } finally {
-      setBusy(false)
-      clearInterval(timer)
+      if (statusData.status === 'completed') {
+        console.log("STATUS:", statusData.status)
+        console.log("COMPLETED JOB ID:", statusData.job_id)
+        setVideoUrl(statusData.video_url)
+        setCompleted(true)
+        setMessage('Done! Preview below.')
+        setProgress(100)
+        break
+      }
+
+      setMessage('Generating video…')
+      setProgress((p) => Math.min(p + 5, 95))
     }
+
+  } catch (error) {
+    setMessage(error.message)
+    setProgress(0)
+  } finally {
+    setBusy(false)
   }
+}
 
   const handleDownload = async (url, name) => {
     try {
@@ -142,7 +189,7 @@ function App() {
           </div>
         )}
 
-        {videoUrl && (
+        {!busy && completed && videoUrl && processingJobId === jobId && (
           <div className="preview">
             <div className="preview-header">
               <div>

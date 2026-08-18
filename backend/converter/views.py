@@ -27,6 +27,10 @@ from moviepy.editor import (
     concatenate_videoclips
 )
 
+from .tasks import convert_document_task
+from django.http import JsonResponse
+from celery.result import AsyncResult
+
 SUPPORTED_EXTENSIONS = {".pdf", ".docx", ".txt"}
 MAX_FILE_SIZE_MB = 20
 VIDEO_SIZE = (1280, 720)
@@ -604,38 +608,101 @@ class DocumentToVideoView(APIView):
         narration_enabled = request.data.get("narration") == "true"
 
         if not upload:
-            return Response({"detail": "Attach a document file as 'file'."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "Attach a document file as 'file'."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         if upload.size > MAX_FILE_SIZE_MB * 1024 * 1024:
-            return Response({"detail": f"File too large. Limit is {MAX_FILE_SIZE_MB} MB."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {
+                    "detail": f"File too large. Limit is {MAX_FILE_SIZE_MB} MB."
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         ext = Path(upload.name).suffix.lower()
+
         if ext not in SUPPORTED_EXTENSIONS:
             return Response(
-                {"detail": f"Unsupported format '{ext}'. Use .pdf, .docx, or .txt."},
-                status=status.HTTP_400_BAD_REQUEST,
+                {
+                    "detail": f"Unsupported format '{ext}'. Use .pdf, .docx, or .txt."
+                },
+                status=status.HTTP_400_BAD_REQUEST
             )
 
         job_id = uuid.uuid4().hex
-        workdir = Path(settings.MEDIA_ROOT) / "jobs" / job_id
+
+        workdir = (
+            Path(settings.MEDIA_ROOT)
+            / "jobs"
+            / job_id
+        )
+
         src_path = workdir / f"source{ext}"
+
         save_upload(upload, src_path)
 
         try:
-            if ext == ".pdf":
-                image_paths = render_pdf_pages(src_path, workdir)
-            else:
-                image_paths = render_text_doc(src_path, workdir, ext,  narration_enabled)
-            print("NEW IMAGE PATHS:", image_paths)
+            convert_document_task.apply_async(
+                args=[
+                    job_id,
+                    str(src_path),
+                    ext
+                ],
+                task_id=job_id
+            )
 
-            video_path = workdir / "video.mp4"
-            audio_clip = None
+        except Exception as exc:
+            return Response(
+                {
+                    "detail": f"Failed to start conversion: {exc}"
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
-            
+        return Response(
+            {
+                "job_id": job_id,
+                "status": "processing"
+            },
+            status=status.HTTP_202_ACCEPTED
+        )
 
-            build_video_from_pages(image_paths, video_path, audio_clip)
-        except Exception as exc:  
-            return Response({"detail": f"Conversion failed: {exc}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+class JobStatusView(APIView):
+    def get(self, request, job_id):
 
-        video_url = request.build_absolute_uri(settings.MEDIA_URL + f"jobs/{job_id}/video.mp4")
-        return Response({"video_url": video_url, "job_id": job_id}, status=status.HTTP_201_CREATED)
+        task = AsyncResult(job_id)
+
+        if task.state == "SUCCESS":
+
+            video_path = (
+                Path(settings.MEDIA_ROOT)
+                / "jobs"
+                / job_id
+                / "video.mp4"
+            )
+
+            if video_path.exists():
+
+                video_url = request.build_absolute_uri(
+                    settings.MEDIA_URL
+                    + f"jobs/{job_id}/video.mp4"
+                )
+
+                return Response({
+                    "job_id": job_id,
+                    "status": "completed",
+                    "video_url": video_url,
+                })
+
+        if task.state == "FAILURE":
+            return Response({
+                "job_id": job_id,
+                "status": "failed",
+            })
+
+        return Response({
+            "job_id": job_id,
+            "status": "processing",
+        })
